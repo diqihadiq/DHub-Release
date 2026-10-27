@@ -1,16 +1,23 @@
 # Build installer Windows (.exe) dan macOS (.dmg) lalu unggah ke GitHub Releases (sumber auto-update).
-# Cara rilis: naikkan "version" di package.json, commit, lalu: git tag v2.0.1 && git push --tags
+# Rilis baru: naikkan "version" di package.json, commit, lalu buat Release dengan tag v<versi> (atau: git tag v2.0.1 && git push --tags).
+# Jalankan manual satu OS saja: tab Actions -> Release -> Run workflow -> pilih OS.
 name: Release
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      target:
+        description: "OS yang dibuild"
+        type: choice
+        options: [windows-latest, macos-latest]
+        default: macos-latest
 jobs:
   build:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        os: ${{ fromJSON(github.event_name == 'workflow_dispatch' && format('["{0}"]', inputs.target) || '["windows-latest","macos-latest"]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -18,12 +25,19 @@ jobs:
         with: { node-version: 20 }
       - run: npm ci
       - run: npm test
+      # Penandatanganan HANYA dipakai kalau secret-nya diisi. Tanpa secret, build tetap jalan (installer tidak bertanda tangan).
+      - name: Atur penandatanganan (opsional)
+        shell: bash
+        env:
+          CERT: ${{ matrix.os == 'macos-latest' && secrets.MAC_CSC_LINK || secrets.WIN_CSC_LINK }}
+          CERT_PASS: ${{ matrix.os == 'macos-latest' && secrets.MAC_CSC_KEY_PASSWORD || secrets.WIN_CSC_KEY_PASSWORD }}
+        run: |
+          if [ -n "$CERT" ]; then
+            echo "CSC_LINK=$CERT" >> "$GITHUB_ENV"
+            echo "CSC_KEY_PASSWORD=$CERT_PASS" >> "$GITHUB_ENV"
+          else
+            echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
+          fi
       - run: npx electron-builder --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # macOS (opsional, perlu Apple Developer Program): sertifikat .p12 base64 + notarisasi
-          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
