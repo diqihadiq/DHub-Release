@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>DHub — Manajer Proxy &amp; Log Ganti Akun</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'">
+<link rel="stylesheet" href="ui.css">
+<link rel="stylesheet" href="proxy.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <img src="icons/icon-128.png" alt="">
+    <div>
+      <h1>DHub · Manajer Proxy</h1>
+      <p>1 akun = 1 IP konsisten — proteksi suspend multi-akun</p>
+    </div>
+  </div>
+  <div class="chips">
+    <span class="chip" id="statusChip" data-testid="proxy-status-chip">memuat…</span>
+    <span class="chip chip-mono" id="ipChip" data-testid="proxy-ip-chip">IP: —</span>
+    <button class="iconbtn" id="btnRefreshIp" data-testid="ip-refresh-button" title="Cek IP jaringan asli komputer ini">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+    </button>
+  </div>
+</header>
+
+<main>
+  <section class="card row-between">
+    <div>
+      <h2>Sistem proxy</h2>
+      <p class="sub">Saat aktif, tiap akun memakai proxy miliknya sendiri di profilnya sendiri (tidak global, jadi bisa jalan paralel). Akun tanpa proxy memakai jaringan asli.</p>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="enabledToggle" data-testid="proxy-enable-toggle">
+      <i></i>
+    </label>
+  </section>
+
+  <section class="card row-between">
+    <div>
+      <h2>Identitas per akun</h2>
+      <p class="sub">Atur siapa yang memakai User-Agent (sistem operasi) dan zona waktu sendiri di tab-nya. Akun ber-proxy mendapat profil acak dan zona waktu mengikuti negara IP proxy. Akun tanpa proxy sebaiknya memakai perangkat asli supaya cocok dengan IP aslinya. Bisa diubah manual di daftar akun di bawah.</p>
+      <select id="identityMode" data-testid="identity-mode-select" style="margin-top:8px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font:400 12.5px var(--mono)">
+        <option value="proxy_only">Hanya akun ber-proxy (disarankan)</option>
+        <option value="all">Semua akun (acak, perilaku lama)</option>
+      </select>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="identityToggle" data-testid="identity-enable-toggle">
+      <i></i>
+    </label>
+  </section>
+
+  <section class="card">
+    <div class="row-between head">
+      <h2>Gateway proxy</h2>
+      <div class="btnrow">
+        <button class="btn btn-ghost" id="btnExportCfg" data-testid="proxy-export-button">Ekspor</button>
+        <button class="btn btn-ghost" id="btnImportCfg" data-testid="proxy-import-button">Impor</button>
+        <input type="file" id="importFile" accept=".json,application/json" hidden data-testid="proxy-import-file">
+        <button class="btn btn-primary" id="btnOpenForm" data-testid="proxy-form-open">+ Tambah proxy</button>
+      </div>
+    </div>
+
+    <form id="proxyForm" hidden data-testid="proxy-form">
+      <div class="grid">
+        <label>Nama / label<input id="fLabel" data-testid="proxy-form-label" placeholder="Gerbang residensial utama"></label>
+        <label>Protokol
+          <select id="fScheme" data-testid="proxy-form-scheme">
+            <option value="http">HTTP</option>
+            <option value="https">HTTPS</option>
+            <option value="socks5">SOCKS5</option>
+          </select>
+        </label>
+        <label>Host<input id="fHost" data-testid="proxy-form-host" placeholder="gate.contoso-residential.com" required></label>
+        <label>Port<input id="fPort" data-testid="proxy-form-port" type="number" min="1" max="65535" placeholder="7000" required></label>
+        <label class="span2"><span>Username (boleh pakai <code>{session}</code>)</span><input id="fUser" data-testid="proxy-form-username" placeholder="customer-abc-session-{session}" spellcheck="false"></label>
+        <label class="span2">Password<input id="fPass" data-testid="proxy-form-password" type="password" placeholder="••••••••" autocomplete="off"></label>
+      </div>
+      <div class="btnrow">
+        <button type="submit" class="btn btn-primary" data-testid="proxy-form-save">Simpan proxy</button>
+        <button type="button" class="btn btn-ghost" id="btnFormCancel" data-testid="proxy-form-cancel">Batal</button>
+      </div>
+    </form>
+
+    <div id="proxyList" class="proxylist" data-testid="proxy-list"></div>
+  </section>
+
+  <section class="card">
+    <div class="head">
+      <h2>Akun tersimpan</h2>
+    </div>
+    <p class="sub">Pilih proxy untuk tiap akun. Mode <b>Sticky</b> = 1 akun selalu IP yang sama (paling aman). Mode <b>Ganti IP</b> = IP baru tiap kali akun dipakai.</p>
+    <div class="bulk" data-testid="bulk-assign">
+      <div class="bulk-title">Atur proxy sekaligus</div>
+      <div class="bulk-row">
+        <select id="bulkProxy" data-testid="bulk-proxy-select"></select>
+        <select id="bulkMode" data-testid="bulk-mode-select">
+          <option value="sticky">Sticky (IP sama)</option>
+          <option value="rotate">Ganti IP tiap pakai</option>
+        </select>
+        <select id="bulkPlat" data-testid="bulk-platform-select">
+          <option value="">Semua platform</option>
+          <option value="instagram">Instagram</option>
+          <option value="tiktok">TikTok</option>
+          <option value="x">X</option>
+          <option value="threads">Threads</option>
+        </select>
+      </div>
+      <label class="bulk-chk"><input type="checkbox" id="bulkOnlyNew" data-testid="bulk-only-new"> Hanya akun yang belum punya proxy</label>
+      <div class="btnrow">
+        <button class="btn btn-primary btn-sm" id="bulkSame" data-testid="bulk-same">Pakai proxy ini untuk semua</button>
+        <button class="btn btn-sm" id="bulkRR" data-testid="bulk-roundrobin">Bagi rata ke semua proxy</button>
+        <button class="btn btn-sm" id="bulkRandom" data-testid="bulk-random">Acak</button>
+        <button class="btn btn-ghost danger btn-sm" id="bulkClear" data-testid="bulk-clear">Lepas semua</button>
+      </div>
+      <p class="sub" id="bulkHint" data-testid="bulk-hint"></p>
+    </div>
+    <div id="accountList" data-testid="account-table"></div>
+  </section>
+
+  <section class="card">
+    <div class="row-between head">
+      <h2>Log aktivitas ganti akun</h2>
+      <div class="btnrow">
+        <button class="btn btn-ghost" id="btnExportLog" data-testid="log-export-button">Unduh log</button>
+        <button class="btn btn-ghost danger" id="btnClearLog" data-testid="log-clear-button">Bersihkan</button>
+      </div>
+    </div>
+    <ul id="switchLog" class="loglist" data-testid="switch-log"></ul>
+  </section>
+
+  <details class="card guide" data-testid="proxy-guide">
+    <summary>Panduan singkat: cara <b>{session}</b> membuat IP sticky</summary>
+    <div class="guide-body">
+      <p>Gateway residensial bergilir memberi IP baru untuk tiap request. Supaya 1 akun selalu dapat IP yang sama, kita mengunci <b>ID sesi</b> di username. Ganti <code>{session}</code> di kolom Username dengan ID yang disimpan DHub per akun — DHub otomatis mengisinya.</p>
+      <table>
+        <tr><th>Provider</th><th>Contoh username</th></tr>
+        <tr><td>Bright Data</td><td><code>brd-customer-hl_x-zone-y-zone-{session}</code></td></tr>
+        <tr><td>Smartproxy / Decodo</td><td><code>customer-user-cc-id-session-{session}</code></td></tr>
+        <tr><td>Oxylabs</td><td><code>customer-user-cc-id-sessid-{session}</code></td></tr>
+        <tr><td>Generik</td><td><code>user-session-{session}</code></td></tr>
+      </table>
+      <p class="warn">Tanpa <code>{session}</code>, semua akun memakai IP yang sama persis — masih lebih aman daripada IP berganti tiap request, tapi sticky per akun adalah yang paling aman.</p>
+      <p>Catatan: proxy dipasang ke profil tiap akun, bukan ke seluruh aplikasi. Akun dengan proxy berbeda bisa berjalan bersamaan tanpa IP tertukar. SOCKS5 dengan username/password tidak didukung Chromium; pakai HTTP/HTTPS atau whitelist IP.</p>
+    </div>
+  </details>
+</main>
+
+<div id="toast" class="toast" data-testid="toast"></div>
+<script src="proxy.js"></script>
+</body>
+</html>

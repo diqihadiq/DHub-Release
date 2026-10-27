@@ -1,0 +1,85 @@
+{
+  "name": "dhub-desktop",
+  "productName": "DHub",
+  "version": "2.0.0",
+  "description": "DHub Desktop: otomatisasi engagement multi-akun (Instagram, TikTok, X, Threads) dengan profil, proxy, dan identitas terpisah per akun.",
+  "author": "DHub",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node test/unit.js",
+    "dist:win": "electron-builder --win --x64",
+    "dist:mac": "electron-builder --mac --universal",
+    "dist": "electron-builder",
+    "smoke": "electron --no-sandbox test/smoke.js",
+    "dist:publish": "electron-builder --publish always",
+    "set-repo": "node scripts/set-repo.js"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.dhub.desktop",
+    "productName": "DHub",
+    "copyright": "DHub",
+    "asar": true,
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "!**/*.map"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "DHub-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "shortcutName": "DHub"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "artifactName": "DHub-${version}-${arch}.${ext}"
+    },
+    "dmg": {
+      "title": "DHub ${version}"
+    }
+  }
+}

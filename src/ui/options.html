@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'" />
+  <title>DHub</title>
+  <link rel="icon" href="icons/icon-48.png" />
+  <link rel="stylesheet" href="ui.css" />
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <aside>
+    <div class="brand"><img class="logo-img" src="icons/icon-48.png" alt="DH" /><b>DHub</b><small id="ver">v1.2.0</small></div>
+    <nav id="nav"></nav>
+    <div class="side-foot">Jam lokal<span class="mono" id="clock">--:--:--</span><button class="btn sm adm" id="adminBtn" hidden title="Buka halaman admin DHub">Admin login</button></div>
+  </aside>
+
+  <main id="main"></main>
+
+  <dialog id="dlg"><form method="dialog" id="taskForm"></form></dialog>
+  <dialog id="addDlg"><form method="dialog" id="addForm"></form></dialog>
+  <input type="file" id="importFile" accept="application/json,.json" hidden />
+  <script src="license-ui.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
