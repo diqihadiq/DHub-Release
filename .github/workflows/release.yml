@@ -1,32 +1,51 @@
-# Build installer Windows (.exe) dan macOS (.dmg) lalu unggah ke GitHub Releases (sumber auto-update).
-# Rilis baru: naikkan "version" di package.json, commit, lalu buat Release dengan tag v<versi> (atau: git tag v2.0.1 && git push --tags).
-# Jalankan manual satu OS saja: tab Actions -> Release -> Run workflow -> pilih OS.
+
 name: Release
+
 on:
   push:
-    tags: ["v*"]
+    tags:
+      - "v*"
+
   workflow_dispatch:
     inputs:
       target:
-        description: "OS yang dibuild"
+        description: "OS yang ingin dibuild"
         type: choice
-        options: [windows-latest, macos-latest]
+        required: true
+        options:
+          - windows-latest
+          - macos-latest
         default: macos-latest
+
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
       fail-fast: false
       matrix:
         os: ${{ fromJSON(github.event_name == 'workflow_dispatch' && format('["{0}"]', inputs.target) || '["windows-latest","macos-latest"]') }}
+
     runs-on: ${{ matrix.os }}
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - run: npm ci
-      - run: npm test
-      # Penandatanganan HANYA dipakai kalau secret-nya diisi. Tanpa secret, build tetap jalan (installer tidak bertanda tangan).
-      - name: Atur penandatanganan (opsional)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Configure signing (optional)
         shell: bash
         env:
           CERT: ${{ matrix.os == 'macos-latest' && secrets.MAC_CSC_LINK || secrets.WIN_CSC_LINK }}
@@ -38,6 +57,15 @@ jobs:
           else
             echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
           fi
-      - run: npx electron-builder --publish always
+
+      - name: Build and publish Windows
+        if: matrix.os == 'windows-latest'
+        run: npx electron-builder --win --x64 --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish macOS
+        if: matrix.os == 'macos-latest'
+        run: npx electron-builder --mac --universal --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
