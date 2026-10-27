@@ -1,7 +1,8 @@
+
 {
   "name": "dhub-desktop",
   "productName": "DHub",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "DHub Desktop: otomatisasi engagement multi-akun (Instagram, TikTok, X, Threads) dengan profil, proxy, dan identitas terpisah per akun.",
   "author": "DHub",
   "main": "src/main/main.js",
@@ -30,6 +31,12 @@
     "directories": {
       "output": "dist",
       "buildResources": "build"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "diqihadiq",
+      "repo": "DHub-Release",
+      "releaseType": "release"
     },
     "files": [
       "src/**/*",
